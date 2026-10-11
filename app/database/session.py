@@ -1,0 +1,17 @@
+from __future__ import annotations
+from collections.abc import AsyncGenerator
+from typing import Any
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from app.core.config import get_settings
+_settings = get_settings()
+engine = create_async_engine(_settings.database_url, echo=_settings.debug, pool_size=10, max_overflow=20, pool_pre_ping=True, connect_args={'server_settings': {'application_name': 'geo_api'}})
+AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, autocommit=False, autoflush=False, expire_on_commit=False)
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

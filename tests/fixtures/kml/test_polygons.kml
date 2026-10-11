@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Test KML</name>
+    <description>Test polygons for geospatial API testing</description>
+    <Placemark>
+      <name>London Box</name>
+      <description>A box over London</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              -0.5,51.5,0
+              0.5,51.5,0
+              0.5,51.0,0
+              -0.5,51.0,0
+              -0.5,51.5,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+    <Placemark>
+      <name>Hyde Park approx</name>
+      <description>Approximate polygon of Hyde Park, London</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              -0.1775,51.5115,0
+              -0.1520,51.5115,0
+              -0.1520,51.5010,0
+              -0.1775,51.5010,0
+              -0.1775,51.5115,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

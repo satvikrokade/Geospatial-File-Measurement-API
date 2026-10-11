@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌍 Geo Map — {{ filename }}</title>
+  <meta name="description" content="Interactive Leaflet preview of uploaded geospatial file with measurements" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #334155;
+      --border: #475569;
+      --primary: #3b82f6;
+      --primary-light: #60a5fa;
+      --accent: #10b981;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      z-index: 1000;
+    }
+
+    .header-logo {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-filename {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      flex: 1;
+    }
+
+    .header-filename strong { color: var(--text); }
+
+    .unit-switcher {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .unit-switcher label { color: var(--text-muted); }
+
+    .unit-switcher select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────── */
+    .sidebar {
+      width: 320px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-section h3 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary-light);
+      margin-bottom: 12px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+
+    .stat-card:hover { border-color: var(--primary); }
+
+    .stat-card .label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-card .value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .stat-card .value.accent { color: var(--accent); }
+    .stat-card .value.primary { color: var(--primary-light); }
+
+    .method-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #1d4ed8, #0369a1);
+      color: #fff;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    .warnings-list {
+      list-style: none;
+    }
+
+    .warnings-list li {
+      font-size: 0.75rem;
+      color: var(--warning);
+      padding: 4px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .warnings-list li::before { content: "⚠"; }
+
+    /* Layer controls */
+    .layer-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .layer-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    .layer-toggle:hover { background: var(--surface2); }
+
+    .layer-toggle input[type=checkbox] {
+      width: 16px; height: 16px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .layer-toggle .dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .layer-toggle .layer-name {
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+
+    /* Download button */
+    .btn-download {
+      display: block;
+      text-align: center;
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      margin: 16px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-download:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── Map ─────────────────────────────────────────────── */
+    #map {
+      flex: 1;
+      z-index: 1;
+    }
+
+    /* ── Leaflet custom popup ────────────────────────────── */
+    .geo-popup {
+      font-family: 'Inter', sans-serif;
+      min-width: 200px;
+    }
+
+    .geo-popup h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1a365d;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+
+    .geo-popup .popup-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      padding: 2px 0;
+      color: #4a5568;
+    }
+
+    .geo-popup .popup-row strong {
+      color: #2d3748;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">🌍 GeoMeasure</div>
+  <div class="header-filename">
+    <strong>{{ filename }}</strong> &nbsp;·&nbsp; {{ feature_count }} features &nbsp;·&nbsp; {{ format | upper }}
+  </div>
+  <div class="unit-switcher">
+    <label for="areaUnit">Area unit:</label>
+    <select id="areaUnit" onchange="updateUnits()">
+      <option value="m2">m²</option>
+      <option value="ha" selected>ha</option>
+      <option value="km2">km²</option>
+      <option value="acre">acre</option>
+    </select>
+  </div>
+</header>
+
+<div class="app-body">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="sidebar-section">
+      <h3>📊 Summary</h3>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">Features</div>
+          <div class="value primary">{{ feature_count }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">CRS</div>
+          <div class="value" style="font-size:0.8rem">{{ source_crs }}</div>
+        </div>
+        {% if total_area_m2 %}
+        <div class="stat-card">
+          <div class="label">Total Area</div>
+          <div class="value accent" id="totalArea">{{ "%.4f"|format(total_area_m2 / 10000) }} ha</div>
+        </div>
+        {% endif %}
+        {% if total_perimeter_m %}
+        <div class="stat-card">
+          <div class="label">Perimeter</div>
+          <div class="value" id="totalPerimeter">{{ "%.2f"|format(total_perimeter_m) }} m</div>
+        </div>
+        {% endif %}
+        {% if centroid %}
+        <div class="stat-card" style="grid-column: span 2;">
+          <div class="label">Centroid (WGS84)</div>
+          <div class="value" style="font-size:0.78rem">
+            Lon {{ "%.5f"|format(centroid.longitude) }}, Lat {{ "%.5f"|format(centroid.latitude) }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="method-badge">⚡ {{ calculation_method }}</div>
+    </div>
+
+    {% if warnings %}
+    <div class="sidebar-section">
+      <h3>⚠️ Warnings</h3>
+      <ul class="warnings-list">
+        {% for w in warnings %}
+        <li>{{ w }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-section">
+      <h3>🗺️ Layers</h3>
+      <div class="layer-controls">
+        <label class="layer-toggle">
+          <input type="checkbox" id="layerPolygons" checked onchange="toggleLayer('polygons', this.checked)" />
+          <span class="dot" style="background:#3b82f6;border:2px solid #1d4ed8"></span>
+          <span class="layer-name">Polygons</span>
+        </label>
+        <label class="layer-toggle">
+          <input type="checkbox" id="layerCentroid" checked onchange="toggleLayer('centroid', this.checked)" />
+          <span class="dot" style="background:#10b981"></span>
+          <span class="layer-name">Centroid</span>
+        </label>
+        <label class="layer-toggle">
+          <input type="checkbox" id="layerBbox" checked onchange="toggleLayer('bbox', this.checked)" />
+          <span class="dot" style="background:#f59e0b;border-radius:2px"></span>
+          <span class="layer-name">Bounding Box</span>
+        </label>
+      </div>
+    </div>
+
+    <a class="btn-download" href="/api/v1/files/{{ file_id }}/report.pdf" download>
+      📄 Download PDF Report
+    </a>
+  </aside>
+
+  <!-- Map -->
+  <div id="map"></div>
+</div>
+
+<script>
+  // ── Data injected from Jinja2 ─────────────────────────────
+  const GEOJSON_DATA = {{ geojson | tojson }};
+  const FILE_ID = "{{ file_id }}";
+  const TOTAL_AREA_M2 = {{ total_area_m2 or 0 }};
+  const CENTROID = {{ centroid | tojson if centroid else "null" }};
+  const BBOX = {{ bbox | tojson if bbox else "null" }};
+
+  // ── Conversion factors ────────────────────────────────────
+  const AREA_FACTORS = { m2: 1, ha: 1/10000, km2: 1/1e6, acre: 1/4046.8564224 };
+  const AREA_LABELS  = { m2: "m²", ha: "ha", km2: "km²", acre: "acre" };
+
+  // ── Map init ──────────────────────────────────────────────
+  const map = L.map('map', { zoomControl: true });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20,
+  }).addTo(map);
+
+  // ── Layers ────────────────────────────────────────────────
+  const layers = {};
+
+  // Polygon / feature layer
+  layers.polygons = L.geoJSON(GEOJSON_DATA, {
+    style: feature => ({
+      fillColor: getFeatureColor(feature.properties._feature_index || 0),
+      fillOpacity: 0.35,
+      color: '#60a5fa',
+      weight: 2,
+      opacity: 0.9,
+    }),
+    pointToLayer: (feature, latlng) =>
+      L.circleMarker(latlng, { radius: 8, fillColor: '#10b981', fillOpacity: 0.8, color: '#fff', weight: 2 }),
+    onEachFeature: (feature, layer) => {
+      layer.on('click', () => showFeaturePopup(feature, layer));
+      layer.on('mouseover', function() { this.setStyle({ fillOpacity: 0.6 }); });
+      layer.on('mouseout',  function() { layers.polygons.resetStyle(this); });
+    }
+  }).addTo(map);
+
+  // Fit map to features
+  try { map.fitBounds(layers.polygons.getBounds().pad(0.1)); } catch(e) {}
+
+  // Centroid marker
+  if (CENTROID) {
+    layers.centroid = L.circleMarker(
+      [CENTROID.latitude, CENTROID.longitude],
+      { radius: 10, fillColor: '#10b981', fillOpacity: 1, color: '#fff', weight: 3 }
+    ).addTo(map);
+    layers.centroid.bindPopup(
+      `<div class="geo-popup"><h4>📍 Overall Centroid</h4>
+       <div class="popup-row"><span>Longitude</span><strong>${CENTROID.longitude.toFixed(6)}</strong></div>
+       <div class="popup-row"><span>Latitude</span><strong>${CENTROID.latitude.toFixed(6)}</strong></div></div>`
+    );
+  }
+
+  // Bounding box rectangle
+  if (BBOX) {
+    layers.bbox = L.rectangle(
+      [[BBOX.min_lat, BBOX.min_lon], [BBOX.max_lat, BBOX.max_lon]],
+      { color: '#f59e0b', weight: 2, fill: false, dashArray: '6 4' }
+    ).addTo(map);
+  }
+
+  // ── Feature color palette ─────────────────────────────────
+  function getFeatureColor(idx) {
+    const palette = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899'];
+    return palette[idx % palette.length];
+  }
+
+  // ── Popup builder ─────────────────────────────────────────
+  function showFeaturePopup(feature, layer) {
+    const p = feature.properties || {};
+    const unit = document.getElementById('areaUnit').value;
+    const factor = AREA_FACTORS[unit];
+    const label  = AREA_LABELS[unit];
+
+    let html = `<div class="geo-popup"><h4>Feature #${p._feature_index ?? '?'} — ${p._geometry_type ?? ''}</h4>`;
+
+    if (p.area_m2 != null) {
+      const converted = (p.area_m2 * factor).toFixed(4);
+      html += `<div class="popup-row"><span>Area</span><strong>${converted} ${label}</strong></div>`;
+    }
+    if (p.perimeter_m != null) {
+      html += `<div class="popup-row"><span>Perimeter</span><strong>${p.perimeter_m.toFixed(2)} m</strong></div>`;
+    }
+    if (p.length_m != null) {
+      html += `<div class="popup-row"><span>Length</span><strong>${p.length_m.toFixed(2)} m</strong></div>`;
+    }
+    if (p.centroid_wgs84) {
+      const c = p.centroid_wgs84;
+      html += `<div class="popup-row"><span>Centroid</span><strong>${c.latitude.toFixed(5)}, ${c.longitude.toFixed(5)}</strong></div>`;
+    }
+    if (p.warnings && p.warnings.length > 0) {
+      html += `<div class="popup-row" style="color:#f59e0b"><span>⚠ Warnings</span><strong>${p.warnings.length}</strong></div>`;
+    }
+    html += '</div>';
+
+    layer.bindPopup(html, { maxWidth: 280 }).openPopup();
+  }
+
+  // ── Layer toggle ──────────────────────────────────────────
+  function toggleLayer(name, show) {
+    if (!layers[name]) return;
+    if (show) map.addLayer(layers[name]);
+    else map.removeLayer(layers[name]);
+  }
+
+  // ── Unit switcher ─────────────────────────────────────────
+  function updateUnits() {
+    const unit = document.getElementById('areaUnit').value;
+    const factor = AREA_FACTORS[unit];
+    const label = AREA_LABELS[unit];
+
+    if (TOTAL_AREA_M2) {
+      const converted = (TOTAL_AREA_M2 * factor).toFixed(4);
+      const el = document.getElementById('totalArea');
+      if (el) el.textContent = `${converted} ${label}`;
+    }
+
+    // Refresh layer to update popup values on next open
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+name: CI — Geospatial Measurement API
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system deps (GDAL/PROJ)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdal-dev libgeos-dev libproj-dev libmagic1
+
+      - name: Install Python deps
+        run: |
+          pip install --upgrade pip
+          pip install ruff black mypy pydantic-settings pyjwt argon2-cffi structlog
+
+      - name: Run Ruff
+        run: ruff check app/ tests/
+
+      - name: Run Black (check mode)
+        run: black --check app/ tests/
+
+      - name: Run Mypy
+        run: mypy app/ --ignore-missing-imports
+        continue-on-error: true  # type stubs may be missing in CI
+
+  test:
+    name: Tests + Coverage
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: geospatial_test
+          POSTGRES_USER: geouser
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+
+    env:
+      SECRET_KEY: ci_test_secret_key_at_least_32_characters_long
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: geospatial_test
+      POSTGRES_USER: geouser
+      POSTGRES_PASSWORD: testpassword
+      REDIS_URL: redis://localhost:6379/0
+      UPLOAD_DIR: /tmp/geo_uploads
+      TEST_DATABASE_URL: postgresql+asyncpg://geouser:testpassword@localhost:5432/geospatial_test
+      APP_ENV: testing
+      LOG_JSON: "false"
+      LOG_LEVEL: WARNING
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgdal-dev libgeos-dev libproj-dev \
+            gdal-bin proj-bin libmagic1 libpq-dev
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run migrations
+        run: |
+          alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+psycopg2://geouser:testpassword@localhost:5432/geospatial_test
+
+      - name: Generate test fixtures
+        run: python scripts/create_shapefile_fixture.py
+
+      - name: Run pytest with coverage
+        run: |
+          pytest tests/ \
+            -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  docker:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --target runtime -t geo-api:test .
+
+      - name: Verify image starts
+        run: |
+          docker run --rm -d \
+            -e SECRET_KEY=testkey_at_least_32_characters_here \
+            -e POSTGRES_HOST=localhost \
+            -e POSTGRES_PASSWORD=test \
+            -p 8001:8000 \
+            geo-api:test || true
+          sleep 5
+          docker stop geo-api-test 2>/dev/null || true

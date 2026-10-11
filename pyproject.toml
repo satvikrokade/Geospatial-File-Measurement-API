@@ -1,0 +1,126 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "geospatial-measurement-api"
+version = "1.0.0"
+description = "Production-grade Geospatial File Measurement API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+
+dependencies = [
+    "fastapi[standard]>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14.0",
+    "asyncpg>=0.30.0",
+    "psycopg2-binary>=2.9.10",
+    "geoalchemy2>=0.15.2",
+    "geopandas>=1.0.1",
+    "shapely>=2.0.6",
+    "pyproj>=3.7.0",
+    "fiona>=1.10.1",
+    "argon2-cffi>=23.1.0",
+    "pyjwt>=2.10.0",
+    "structlog>=24.4.0",
+    "reportlab>=4.2.5",
+    "python-multipart>=0.0.17",
+    "python-magic>=0.4.27",
+    "arq>=0.26.1",
+    "redis>=5.2.0",
+    "slowapi>=0.1.9",
+    "jinja2>=3.1.4",
+    "httpx>=0.28.0",
+    "aiofiles>=24.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "anyio>=4.6.0",
+    "aiosqlite>=0.20.0",
+    "ruff>=0.8.0",
+    "black>=24.10.0",
+    "mypy>=1.13.0",
+    "types-python-magic",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "alembic*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = [
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-fail-under=85",
+    "-v",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:fiona",
+    "ignore::DeprecationWarning:geopandas",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = ["E501", "B008", "B904"]
+
+[tool.ruff.isort]
+known-first-party = ["app"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/", "tests/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "geopandas.*",
+    "shapely.*",
+    "fiona.*",
+    "pyproj.*",
+    "geoalchemy2.*",
+    "reportlab.*",
+    "magic.*",
+    "arq.*",
+    "structlog.*",
+    "slowapi.*",
+]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/main.py", "alembic/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abc.abstractmethod",
+]

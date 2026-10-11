@@ -1,0 +1,73 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [0.0, 0.0],
+            [0.0, 0.00904372],
+            [0.00904372, 0.00904372],
+            [0.00904372, 0.0],
+            [0.0, 0.0]
+          ]
+        ]
+      },
+      "properties": {
+        "name": "1km_square_approx",
+        "description": "Approximately 1km × 1km square at the equator (for testing). True geodesic area ≈ 100 ha"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [2.2945, 48.8584],
+            [2.2955, 48.8584],
+            [2.2955, 48.8594],
+            [2.2945, 48.8594],
+            [2.2945, 48.8584]
+          ]
+        ]
+      },
+      "properties": {
+        "name": "Paris_small_polygon",
+        "description": "Small polygon near Eiffel Tower, Paris"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [10.0, 10.0],
+              [10.0, 10.01],
+              [10.01, 10.01],
+              [10.01, 10.0],
+              [10.0, 10.0]
+            ]
+          ],
+          [
+            [
+              [10.02, 10.02],
+              [10.02, 10.03],
+              [10.03, 10.03],
+              [10.03, 10.02],
+              [10.02, 10.02]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "name": "MultiPolygon_test",
+        "description": "Two separate polygons in a MultiPolygon"
+      }
+    }
+  ]
+}

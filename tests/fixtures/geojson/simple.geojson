@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-0.5, 51.5],
+            [0.5, 51.5],
+            [0.5, 51.0],
+            [-0.5, 51.0],
+            [-0.5, 51.5]
+          ]
+        ]
+      },
+      "properties": {
+        "name": "London area polygon"
+      }
+    }
+  ]
+}
